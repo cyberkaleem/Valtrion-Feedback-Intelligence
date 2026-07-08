@@ -8,3 +8,6 @@ matplotlib
 seaborn
 joblib
 plotly
+transformers
+torch
+scipy
