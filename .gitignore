@@ -1,4 +1,4 @@
-﻿venv/
+venv/
 __pycache__/
 *.pyc
 .env
@@ -11,6 +11,13 @@ data/processed/*
 
 models/*
 !models/.gitkeep
+!models/sentiment_pipeline.joblib
+!models/model_metrics.json
+!models/experiment_results.json
+!models/balanced_experiment_results.json
 
 outputs/*
 !outputs/.gitkeep
+!outputs/classification_report.txt
+!outputs/confusion_matrix.png
+!outputs/sample_predictions.csv
