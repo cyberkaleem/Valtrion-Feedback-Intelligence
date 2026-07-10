@@ -1,9 +1,19 @@
-import json
 import re
+import json
 from typing import Dict, Any, List
 
 from src.transformer_sentiment import predict_transformer_sentiment
 
+def keyword_exists(text: str, keyword: str) -> bool:
+    """
+    Match complete words/phrases only.
+    Prevents detecting 'app' inside words like 'unhappy'.
+    """
+    text = str(text).lower()
+    keyword = str(keyword).lower().strip()
+
+    pattern = r"\b" + re.escape(keyword) + r"\b"
+    return re.search(pattern, text) is not None
 
 ASPECT_KEYWORDS = {
     "Product Quality": [
@@ -52,7 +62,6 @@ ASPECT_KEYWORDS = {
         "affordable",
         "value",
         "worth",
-        "money",
         "overpriced",
     ],
     "Payment and Refund": [
@@ -64,6 +73,12 @@ ASPECT_KEYWORDS = {
         "paid",
         "deducted",
         "cashback",
+        "money deducted",
+        "money was deducted",
+        "amount deducted",
+        "money debited",
+        "amount debited",
+        "payment failed",
     ],
     "App or Website Experience": [
         "app",
@@ -120,7 +135,7 @@ def detect_aspects_in_text(text: str) -> List[str]:
     detected_aspects = []
 
     for aspect, keywords in ASPECT_KEYWORDS.items():
-        if any(keyword in text_lower for keyword in keywords):
+        if any(keyword_exists(text_lower, keyword) for keyword in keywords):
             detected_aspects.append(aspect)
 
     return detected_aspects

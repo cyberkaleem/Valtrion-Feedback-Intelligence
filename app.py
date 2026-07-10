@@ -370,6 +370,72 @@ if result:
 
                         with st.expander("Aspect probabilities"):
                             render_probability_bars(aspect.get("probabilities", {}))
+        # Emotion intelligence
+    emotion_analysis = result.get("emotion_analysis", {})
+
+    if emotion_analysis:
+        st.divider()
+        st.subheader("Emotion Intelligence")
+
+        emotion_col_1, emotion_col_2, emotion_col_3 = st.columns(3)
+
+        with emotion_col_1:
+            st.metric(
+                "Primary Emotion",
+                format_label(emotion_analysis.get("primary_emotion")),
+            )
+
+        with emotion_col_2:
+            st.metric(
+                "Emotion Strength",
+                format_label(emotion_analysis.get("emotion_strength")),
+            )
+
+        with emotion_col_3:
+            st.metric(
+                "Emotion Confidence",
+                format_percent(emotion_analysis.get("emotion_confidence")),
+            )
+
+        with st.container(border=True):
+            st.markdown("#### Emotion Explanation")
+            st.write(emotion_analysis.get("emotion_reason", "No emotion reason available."))
+
+            secondary_emotions = emotion_analysis.get("secondary_emotions", [])
+
+            st.markdown("#### Secondary Emotion Signals")
+
+            if secondary_emotions:
+                secondary_cols = st.columns(min(len(secondary_emotions), 3))
+
+                for index, emotion in enumerate(secondary_emotions):
+                    with secondary_cols[index % len(secondary_cols)]:
+                        with st.container(border=True):
+                            st.write(f"**Emotion:** {format_label(emotion.get('emotion'))}")
+                            st.write(f"**Strength:** {format_label(emotion.get('strength'))}")
+                            st.write(f"**Confidence:** {format_percent(emotion.get('confidence'))}")
+            else:
+                st.write("No meaningful secondary emotion signals detected.")
+
+            with st.expander("Detected emotion cues"):
+                detected_cues = emotion_analysis.get("detected_cues", {})
+
+                if detected_cues:
+                    for emotion, cues in detected_cues.items():
+                        st.write(f"**{format_label(emotion)}:** {', '.join(cues)}")
+                else:
+                    st.write("No explicit emotion cues detected.")
+
+            with st.expander("Emotion score details"):
+                emotion_scores = emotion_analysis.get("emotion_scores", {})
+
+                if emotion_scores:
+                    for emotion, score in emotion_scores.items():
+                        if float(score) >= 1.0:
+                            st.write(f"**{format_label(emotion)}** — {score}")
+                            st.progress(min(max(float(score) / 5.0, 0.0), 1.0))
+                else:
+                    st.write("No emotion score details available.")
     # Model comparison
     st.subheader("Model Comparison")
 
