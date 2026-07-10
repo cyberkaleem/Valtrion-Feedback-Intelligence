@@ -91,6 +91,46 @@ def get_sentiment_display(sentiment: str) -> str:
 
     return format_label(sentiment)
 
+def generate_final_verdict(result: dict) -> str:
+    """
+    Generate an executive summary from sentiment, reliability,
+    intensity, and aspect analysis.
+    """
+    sentiment = format_label(result.get("recommended_sentiment"))
+    reliability = result.get("reliability", {})
+    intensity = result.get("intensity", {})
+    aspect_analysis = result.get("aspect_analysis", {})
+
+    confidence_level = format_label(reliability.get("confidence_level"))
+    review_status = format_label(reliability.get("review_status"))
+    sentiment_intensity = format_label(intensity.get("sentiment_intensity"))
+
+    mixed_feedback = aspect_analysis.get("mixed_feedback", False)
+    aspects = aspect_analysis.get("aspects", [])
+
+    if mixed_feedback and aspects:
+        aspect_parts = []
+
+        for aspect in aspects:
+            aspect_name = aspect.get("aspect", "Unknown Aspect")
+            aspect_sentiment = format_label(aspect.get("sentiment"))
+            aspect_parts.append(f"{aspect_name} is {aspect_sentiment}")
+
+        aspect_summary = ", while ".join(aspect_parts)
+
+        return (
+            f"Mixed feedback detected. {aspect_summary}. "
+            f"The overall transformer prediction leans {sentiment} with "
+            f"{confidence_level.lower()} confidence and {sentiment_intensity.lower()} intensity. "
+            f"Review status: {review_status}."
+        )
+
+    return (
+        f"Valtrion classifies this feedback as {sentiment} with "
+        f"{sentiment_intensity.lower()} intensity. The prediction has "
+        f"{confidence_level.lower()} confidence. Review status: {review_status}."
+    )
+
 
 def render_probability_bars(probabilities: dict) -> None:
     """Render probability values as progress bars."""
@@ -107,6 +147,20 @@ def analyze_feedback(text: str):
     with st.spinner("Running Valtrion analysis..."):
         return compare_sentiment_models(text.strip())
 
+def render_sentiment_badge(sentiment: str) -> str:
+    """
+    Return a clean display label for aspect sentiment.
+    """
+    sentiment = str(sentiment).lower()
+
+    if sentiment == "positive":
+        return "Positive"
+    if sentiment == "negative":
+        return "Negative"
+    if sentiment == "neutral":
+        return "Neutral"
+
+    return format_label(sentiment)
 
 if "feedback_text" not in st.session_state:
     st.session_state.feedback_text = ""
@@ -226,6 +280,11 @@ if result:
 
         if short_status != review_status:
             st.caption(review_status)
+        final_verdict = generate_final_verdict(result)
+
+    with st.container(border=True):
+        st.markdown("#### Final Verdict")
+        st.write(final_verdict)
 
     st.divider()
 
@@ -273,7 +332,44 @@ if result:
                 st.write(intensity["intensity_reason"])
 
     st.divider()
+        # Aspect intelligence
+    aspect_analysis = result.get("aspect_analysis", {})
 
+    if aspect_analysis:
+        st.divider()
+        st.subheader("Aspect Intelligence")
+
+        aspect_count = aspect_analysis.get("aspect_count", 0)
+        mixed_feedback = aspect_analysis.get("mixed_feedback", False)
+
+        aspect_metric_1, aspect_metric_2 = st.columns(2)
+
+        with aspect_metric_1:
+            st.metric("Detected Aspects", aspect_count)
+
+        with aspect_metric_2:
+            st.metric(
+                "Mixed Feedback",
+                "Yes" if mixed_feedback else "No",
+            )
+
+        aspects = aspect_analysis.get("aspects", [])
+
+        if aspects:
+            aspect_columns = st.columns(min(len(aspects), 3))
+
+            for index, aspect in enumerate(aspects):
+                with aspect_columns[index % len(aspect_columns)]:
+                    with st.container(border=True):
+                        st.markdown(f"#### {aspect.get('aspect', 'Unknown Aspect')}")
+                        st.write(f"**Sentiment:** {render_sentiment_badge(aspect.get('sentiment'))}")
+                        st.write(f"**Confidence:** {format_percent(aspect.get('confidence'))}")
+
+                        with st.expander("Evidence"):
+                            st.write(aspect.get("evidence", "No evidence available."))
+
+                        with st.expander("Aspect probabilities"):
+                            render_probability_bars(aspect.get("probabilities", {}))
     # Model comparison
     st.subheader("Model Comparison")
 

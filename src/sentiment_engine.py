@@ -6,6 +6,7 @@ from src.predict import predict_sentiment
 from src.transformer_sentiment import predict_transformer_sentiment
 from src.reliability_engine import analyze_reliability
 from src.intensity_engine import analyze_sentiment_intensity
+from src.aspect_analyzer import analyze_aspects
 
 
 def compare_sentiment_models(text: str) -> Dict[str, Any]:
@@ -43,6 +44,7 @@ def compare_sentiment_models(text: str) -> Dict[str, Any]:
     confidence=transformer_result.get("confidence"),
     probabilities=transformer_result.get("probabilities", {}),
 )
+    aspect_analysis = analyze_aspects(text)
 
 
     result = {
@@ -52,7 +54,7 @@ def compare_sentiment_models(text: str) -> Dict[str, Any]:
         "model_agreement": model_agreement,
         "reliability": reliability_analysis,
         "intensity": intensity_analysis,
-        
+        "aspect_analysis": aspect_analysis,
         "classical_model": {
             "model_type": "TF-IDF + Logistic Regression",
             "sentiment": classical_sentiment,
@@ -82,6 +84,7 @@ def print_comparison(result: Dict[str, Any]) -> None:
     print(f"Recommended Sentiment: {result['recommended_sentiment']}")
     print(f"Recommended Model: {result['recommended_model']}")
     print(f"Model Agreement: {result['model_agreement']}")
+
     print()
     print("Reliability Assessment")
     print("-" * 45)
@@ -89,12 +92,27 @@ def print_comparison(result: Dict[str, Any]) -> None:
     print(f"Decision Margin: {result['reliability']['decision_margin']}")
     print(f"Review Status: {result['reliability']['review_status']}")
     print(f"Reason: {result['reliability']['reliability_reason']}")
+
     print()
     print("Sentiment Intensity")
     print("-" * 45)
     print(f"Intensity: {result['intensity']['sentiment_intensity']}")
     print(f"Probability Spread: {result['intensity']['probability_spread']}")
     print(f"Reason: {result['intensity']['intensity_reason']}")
+
+    print()
+    print("Aspect Intelligence")
+    print("-" * 45)
+    aspect_analysis = result.get("aspect_analysis", {})
+    print(f"Aspect Count: {aspect_analysis.get('aspect_count')}")
+    print(f"Mixed Feedback: {aspect_analysis.get('mixed_feedback')}")
+
+    for aspect in aspect_analysis.get("aspects", []):
+        print()
+        print(f"Aspect: {aspect.get('aspect')}")
+        print(f"Evidence: {aspect.get('evidence')}")
+        print(f"Sentiment: {aspect.get('sentiment')}")
+        print(f"Confidence: {aspect.get('confidence')}")
 
     print()
     print("Classical Model")
