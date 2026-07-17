@@ -327,7 +327,7 @@ def detect_emotion(
         detected_cues=detected_cues,
         sentiment=sentiment,
     )
-
+    
     return {
         "primary_emotion": primary_emotion,
         "emotion_strength": emotion_strength,
