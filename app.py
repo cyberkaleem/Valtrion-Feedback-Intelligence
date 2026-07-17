@@ -91,6 +91,43 @@ def get_sentiment_display(sentiment: str) -> str:
 
     return format_label(sentiment)
 
+
+def render_guard_banner(intelligence_guard):
+    """
+    Display a clear reliability banner based on the Intelligence Guard status.
+    """
+    if not intelligence_guard:
+        return
+
+    guard_status = intelligence_guard.get("guard_status", "unknown")
+    guard_reason = intelligence_guard.get(
+        "guard_reason",
+        "No reliability guard explanation available.",
+    )
+
+    if guard_status == "review_required":
+        st.error(
+            "Reliability Guard: Review Required. "
+            "One or more intelligence outputs may be inconsistent or risky."
+        )
+        st.caption(guard_reason)
+
+    elif guard_status == "review_optional":
+        st.warning(
+            "Reliability Guard: Review Optional. "
+            "The output is usable, but one supporting layer has uncertainty."
+        )
+        st.caption(guard_reason)
+
+    elif guard_status == "stable":
+        st.success(
+            "Reliability Guard: Stable. "
+            "No major reliability issues detected across intelligence modules."
+        )
+
+    else:
+        st.info("Reliability Guard status is unavailable.")
+
 def generate_final_verdict(result: dict) -> str:
     """
     Generate an executive summary from sentiment, reliability,
@@ -100,6 +137,8 @@ def generate_final_verdict(result: dict) -> str:
     reliability = result.get("reliability", {})
     intensity = result.get("intensity", {})
     aspect_analysis = result.get("aspect_analysis", {})
+    priority_analysis = result.get("priority_analysis", {})
+    priority_level = format_label(priority_analysis.get("priority_level"))
 
     confidence_level = format_label(reliability.get("confidence_level"))
     review_status = format_label(reliability.get("review_status"))
@@ -122,13 +161,14 @@ def generate_final_verdict(result: dict) -> str:
             f"Mixed feedback detected. {aspect_summary}. "
             f"The overall transformer prediction leans {sentiment} with "
             f"{confidence_level.lower()} confidence and {sentiment_intensity.lower()} intensity. "
-            f"Review status: {review_status}."
+            f"Priority level: {priority_level}. Review status: {review_status}."
         )
 
     return (
         f"Valtrion classifies this feedback as {sentiment} with "
         f"{sentiment_intensity.lower()} intensity. The prediction has "
-        f"{confidence_level.lower()} confidence. Review status: {review_status}."
+        f"{confidence_level.lower()} confidence. Priority level: {priority_level}. "
+        f"Review status: {review_status}."
     )
 
 
@@ -280,11 +320,18 @@ if result:
 
         if short_status != review_status:
             st.caption(review_status)
-        final_verdict = generate_final_verdict(result)
+    final_verdict = generate_final_verdict(result)
+
+    intelligence_guard = result.get("intelligence_guard", {})
+
+    if intelligence_guard:
+        render_guard_banner(intelligence_guard)
 
     with st.container(border=True):
-        st.markdown("#### Final Verdict")
+        st.markdown("### Final Verdict")
         st.write(final_verdict)
+
+    
 
     st.divider()
 
@@ -436,6 +483,124 @@ if result:
                             st.progress(min(max(float(score) / 5.0, 0.0), 1.0))
                 else:
                     st.write("No emotion score details available.")
+        # Priority intelligence
+    priority_analysis = result.get("priority_analysis", {})
+
+    if priority_analysis:
+        st.divider()
+        st.subheader("Priority Intelligence")
+
+        priority_col_1, priority_col_2, priority_col_3, priority_col_4 = st.columns(4)
+
+        with priority_col_1:
+            st.metric(
+                "Priority Level",
+                format_label(priority_analysis.get("priority_level")),
+            )
+
+        with priority_col_2:
+            st.metric(
+                "Priority Score",
+                f"{priority_analysis.get('priority_score', 0)} / 10",
+            )
+
+        with priority_col_3:
+            st.metric(
+                "Priority Confidence",
+                format_label(priority_analysis.get("priority_confidence")),
+            )
+
+        with priority_col_4:
+            st.metric(
+                "Resolution Detected",
+                "Yes" if priority_analysis.get("resolution_detected") else "No",
+            )
+
+        with st.container(border=True):
+            st.markdown("#### Recommended Action")
+            st.write(
+                priority_analysis.get(
+                    "recommended_action",
+                    "No recommended action available.",
+                )
+            )
+
+            st.markdown("#### Priority Reason")
+            st.write(
+                priority_analysis.get(
+                    "priority_reason",
+                    "No priority reason available.",
+                )
+            )
+
+            priority_score = float(priority_analysis.get("priority_score", 0.0))
+            st.progress(min(max(priority_score / 10.0, 0.0), 1.0))
+
+            with st.expander("Evidence sources"):
+                evidence_sources = priority_analysis.get("evidence_sources", [])
+
+                if evidence_sources:
+                    for source in evidence_sources:
+                        st.write(f"- {format_label(source)}")
+                else:
+                    st.write("No evidence sources available.")
+
+            with st.expander("Detected priority cues"):
+                detected_cues = priority_analysis.get("detected_priority_cues", {})
+
+                if detected_cues:
+                    for level, cues in detected_cues.items():
+                        if cues:
+                            st.write(f"**{format_label(level)}:** {', '.join(cues)}")
+                else:
+                    st.write("No priority cues detected.")
+
+        # Intelligence reliability guard
+    intelligence_guard = result.get("intelligence_guard", {})
+
+    if intelligence_guard:
+        st.divider()
+        st.subheader("Intelligence Reliability Guard")
+
+        guard_status = intelligence_guard.get("guard_status", "unknown")
+        issue_count = intelligence_guard.get("issue_count", 0)
+        guard_reason = intelligence_guard.get(
+            "guard_reason",
+            "No reliability guard explanation available.",
+        )
+
+        guard_col_1, guard_col_2 = st.columns(2)
+
+        with guard_col_1:
+            st.metric(
+                "Guard Status",
+                format_label(guard_status),
+            )
+
+        with guard_col_2:
+            st.metric(
+                "Detected Issues",
+                issue_count,
+            )
+
+        with st.container(border=True):
+            st.markdown("#### Guard Explanation")
+            st.write(guard_reason)
+
+            issues = intelligence_guard.get("issues", [])
+
+            if issues:
+                st.markdown("#### Reliability Issues")
+
+                for issue in issues:
+                    severity = format_label(issue.get("severity"))
+                    module = format_label(issue.get("module"))
+                    message = issue.get("message", "")
+
+                    st.write(f"**{severity} — {module}:** {message}")
+            else:
+                st.success("No major reliability issues detected across intelligence modules.")
+    
     # Model comparison
     st.subheader("Model Comparison")
 

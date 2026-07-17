@@ -8,6 +8,8 @@ from src.reliability_engine import analyze_reliability
 from src.intensity_engine import analyze_sentiment_intensity
 from src.aspect_analyzer import analyze_aspects
 from src.emotion_detector import detect_emotion
+from src.priority_engine import analyze_priority
+from src.intelligence_guard import validate_intelligence_outputs
 
 
 def compare_sentiment_models(text: str) -> Dict[str, Any]:
@@ -50,6 +52,21 @@ def compare_sentiment_models(text: str) -> Dict[str, Any]:
     text=text,
     sentiment=transformer_sentiment,
 )
+    priority_analysis = analyze_priority(
+    text=text,
+    sentiment=transformer_sentiment,
+    reliability=reliability_analysis,
+    emotion_analysis=emotion_analysis,
+    aspect_analysis=aspect_analysis,
+)
+    intelligence_guard = validate_intelligence_outputs(
+    text=text,
+    sentiment=transformer_sentiment,
+    reliability=reliability_analysis,
+    aspect_analysis=aspect_analysis,
+    emotion_analysis=emotion_analysis,
+    priority_analysis=priority_analysis,
+)
 
 
     result = {
@@ -61,6 +78,8 @@ def compare_sentiment_models(text: str) -> Dict[str, Any]:
         "intensity": intensity_analysis,
         "aspect_analysis": aspect_analysis,
         "emotion_analysis": emotion_analysis,
+        "priority_analysis": priority_analysis,
+        "intelligence_guard": intelligence_guard,
         "classical_model": {
             "model_type": "TF-IDF + Logistic Regression",
             "sentiment": classical_sentiment,
@@ -141,6 +160,40 @@ def print_comparison(result: Dict[str, Any]) -> None:
             )
     else:
         print("  None")
+    
+    print()
+    print("Priority Intelligence")
+    print("-" * 45)
+    priority_analysis = result.get("priority_analysis", {})
+
+    print(f"Priority Level: {priority_analysis.get('priority_level')}")
+    print(f"Priority Score: {priority_analysis.get('priority_score')}")
+    print(f"Priority Confidence: {priority_analysis.get('priority_confidence')}")
+    print(f"Resolution Detected: {priority_analysis.get('resolution_detected')}")
+    print(f"Reason: {priority_analysis.get('priority_reason')}")
+    print(f"Recommended Action: {priority_analysis.get('recommended_action')}")
+
+    print()
+    print("Intelligence Reliability Guard")
+    print("-" * 45)
+    intelligence_guard = result.get("intelligence_guard", {})
+
+    print(f"Guard Status: {intelligence_guard.get('guard_status')}")
+    print(f"Issue Count: {intelligence_guard.get('issue_count')}")
+    print(f"Reason: {intelligence_guard.get('guard_reason')}")
+
+    issues = intelligence_guard.get("issues", [])
+
+    if issues:
+        print("Issues:")
+        for issue in issues:
+            print(
+                f"- [{issue.get('severity')}] "
+                f"{issue.get('module')}: {issue.get('message')}"
+            )
+    else:
+        print("Issues: None")
+
     print()
     print("Classical Model")
     print("-" * 45)

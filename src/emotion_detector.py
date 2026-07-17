@@ -14,6 +14,35 @@ def phrase_exists(text: str, phrase: str) -> bool:
     pattern = r"\b" + re.escape(phrase) + r"\b"
     return re.search(pattern, text) is not None
 
+def is_negated_positive_cue(text: str, phrase: str) -> bool:
+    """
+    Prevent positive emotion cues from being detected when they are negated.
+
+    Examples:
+    - not satisfied
+    - not happy
+    - not good
+    - never satisfied
+    - wasn't happy
+    """
+    text = text.lower()
+    phrase = phrase.lower()
+
+    negation_pattern = (
+        r"\b("
+        r"not|no|never|hardly|barely|"
+        r"isn't|wasn't|aren't|weren't|"
+        r"don't|doesn't|didn't|can't|cannot"
+        r")\b"
+        r"(?:\s+\w+){0,3}"
+        r"\s+"
+        + re.escape(phrase)
+        + r"\b"
+    )
+
+    return re.search(negation_pattern, text) is not None
+
+
 
 EMOTION_CUES: Dict[str, List[Tuple[str, float]]] = {
     "anger": [
@@ -75,6 +104,12 @@ EMOTION_CUES: Dict[str, List[Tuple[str, float]]] = {
         ("amount deducted", 2.4),
         ("money debited", 2.4),
         ("amount debited", 2.4),
+        ("account hacked", 2.8),
+        ("account was hacked", 2.8),
+        ("hacked", 2.6),
+        ("unauthorized transaction", 2.8),
+        ("fraud", 2.8),
+        ("scam", 2.6),
     ],
     "satisfaction": [
         ("happy", 2.5),
@@ -102,7 +137,10 @@ def find_emotion_cues(text: str) -> Dict[str, List[str]]:
     for emotion, cues in EMOTION_CUES.items():
         for phrase, _weight in cues:
             if phrase_exists(text_lower, phrase):
-                detected.setdefault(emotion, []).append(phrase)
+              if emotion == "satisfaction" and is_negated_positive_cue(text_lower, phrase):
+                continue
+
+              detected.setdefault(emotion, []).append(phrase)
 
     return detected
 
@@ -128,6 +166,9 @@ def score_emotions(
     for emotion, cues in EMOTION_CUES.items():
         for phrase, weight in cues:
             if phrase_exists(text_lower, phrase):
+                if emotion == "satisfaction" and is_negated_positive_cue(text_lower, phrase):
+                    continue
+
                 scores[emotion] += weight
 
     sentiment = str(sentiment).lower() if sentiment else None
